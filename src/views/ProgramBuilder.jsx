@@ -44,7 +44,7 @@ export default function ProgramBuilder() {
       i !== dayIndex ? d : {
         ...d,
         exercises: d.exercises.map((e, j) =>
-          j !== exIndex ? e : { ...e, [field]: field === 'exerciseId' ? Number(value) : Number(value) }
+          j !== exIndex ? e : { ...e, [field]: Number(value) }
         )
       }
     ))
