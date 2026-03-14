@@ -3,8 +3,10 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } f
 import { getExercises, getLogsByExercise } from '../db/index.js'
 import { bestOneRepMax } from '../utils/oneRepMax.js'
 import { projectOneRepMax } from '../utils/projection.js'
+import { useSettings, toDisplay } from '../context/SettingsContext.jsx'
 
 export default function Progress() {
+  const { unit } = useSettings()
   const [exercises, setExercises] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [chartData, setChartData] = useState([])
@@ -35,6 +37,7 @@ export default function Progress() {
 
   const selectedEx = exercises.find(e => e.id === selectedId)
   const hasData = chartData.some(d => d.actual !== null)
+  const unitLabel = unit.toUpperCase()
 
   return (
     <div>
@@ -62,10 +65,17 @@ export default function Progress() {
           <ResponsiveContainer width="100%" height={320}>
             <LineChart data={chartData} margin={{ top: 0, right: 20, bottom: 0, left: 0 }}>
               <XAxis dataKey="date" tick={{ fill: '#888', fontSize: 11 }} tickLine={false} />
-              <YAxis tick={{ fill: '#888', fontSize: 11 }} tickLine={false} axisLine={false} unit=" kg" />
+              <YAxis
+                tick={{ fill: '#888', fontSize: 11 }}
+                tickLine={false}
+                axisLine={false}
+                unit={` ${unitLabel}`}
+                tickFormatter={v => toDisplay(v, unit)}
+              />
               <Tooltip
                 contentStyle={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 6 }}
                 labelStyle={{ color: '#888' }}
+                formatter={(value) => value !== null ? [`${toDisplay(value, unit)} ${unitLabel}`, undefined] : [null, undefined]}
               />
               <Legend wrapperStyle={{ fontSize: 13, color: '#888' }} />
               <Line

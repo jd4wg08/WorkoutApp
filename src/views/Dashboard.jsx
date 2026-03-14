@@ -1,20 +1,21 @@
 import { useState, useEffect } from 'react'
-import { getExercises, getProgram, getLogs } from '../db/index.js'
+import { getExercises, getActiveProgram, getLogs } from '../db/index.js'
 import { muscleStatus, getMuscleLastHit } from '../utils/muscleStatus.js'
+import BodyDiagram from '../components/BodyDiagram.jsx'
 
 const MUSCLE_GROUPS = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Quads', 'Hamstrings', 'Glutes']
-
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
+// Mon=0 … Sun=6 (matches DAYS array and programs store dayOfWeek values)
 function dayOfWeek() {
   return (new Date().getDay() + 6) % 7
 }
 
-function nextHitDay(muscle, program, exercises) {
+function nextHitDay(muscle, programDays, exercises) {
   const today = dayOfWeek()
   const days = [...Array(7).keys()].map(i => (today + i + 1) % 7)
   for (const d of days) {
-    const day = program.find(p => p.dayOfWeek === d)
+    const day = programDays.find(p => p.dayOfWeek === d)
     if (!day) continue
     const hits = day.exercises.some(({ exerciseId }) => {
       const ex = exercises.find(e => e.id === exerciseId)
@@ -27,19 +28,29 @@ function nextHitDay(muscle, program, exercises) {
 
 export default function Dashboard({ onStartLog }) {
   const [exercises, setExercises] = useState([])
-  const [program, setProgram] = useState([])
+  const [activeProgram, setActiveProgram] = useState(null)
   const [logs, setLogs] = useState([])
 
   useEffect(() => {
-    Promise.all([getExercises(), getProgram(), getLogs()]).then(([exs, prog, ls]) => {
+    Promise.all([getExercises(), getActiveProgram(), getLogs()]).then(([exs, prog, ls]) => {
       setExercises(exs)
-      setProgram(prog)
+      setActiveProgram(prog || null)
       setLogs(ls)
     })
   }, [])
 
-  const todayProgram = program.find(p => p.dayOfWeek === dayOfWeek())
+  const programDays = activeProgram?.days || []
+  const todayProgram = programDays.find(p => p.dayOfWeek === dayOfWeek())
   const exMap = Object.fromEntries(exercises.map(e => [e.id, e]))
+
+  const musclesHit = todayProgram
+    ? [...new Set(
+        todayProgram.exercises.flatMap(({ exerciseId }) => {
+          const ex = exMap[exerciseId]
+          return ex ? [...(ex.primary || []), ...(ex.secondary || [])] : []
+        })
+      )]
+    : []
 
   return (
     <div>
@@ -51,7 +62,7 @@ export default function Dashboard({ onStartLog }) {
         {MUSCLE_GROUPS.map(muscle => {
           const lastHit = getMuscleLastHit(muscle, logs, exercises)
           const status = muscleStatus(lastHit)
-          const next = nextHitDay(muscle, program, exercises)
+          const next = nextHitDay(muscle, programDays, exercises)
           return (
             <div key={muscle} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -77,9 +88,17 @@ export default function Dashboard({ onStartLog }) {
 
       {/* Today's workout */}
       <h2>Today</h2>
-      {todayProgram ? (
+      {!activeProgram ? (
         <div className="card">
-          <p style={{ marginBottom: 12, color: 'var(--muted)', fontSize: 13 }}>
+          <p style={{ color: 'var(--muted)' }}>
+            No program active — set one up in <strong>Programs</strong>.
+          </p>
+        </div>
+      ) : todayProgram ? (
+        <div className="card">
+          <BodyDiagram musclesHit={musclesHit} />
+
+          <p style={{ marginBottom: 12, marginTop: 16, color: 'var(--muted)', fontSize: 13 }}>
             {todayProgram.exercises.length} exercise{todayProgram.exercises.length !== 1 ? 's' : ''} scheduled
           </p>
           {todayProgram.exercises.map(({ exerciseId, sets, reps }) => (

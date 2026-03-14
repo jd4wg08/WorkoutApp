@@ -1,26 +1,28 @@
 import { useState, useEffect } from 'react'
-import { getExercises, getProgram, saveLog } from '../db/index.js'
+import { getExercises, getActiveProgram, saveLog } from '../db/index.js'
 import { epley } from '../utils/oneRepMax.js'
+import { useSettings, toDisplay, toKg } from '../context/SettingsContext.jsx'
 
 function today() {
   return new Date().toISOString().split('T')[0]
 }
 
+// Mon=0 … Sun=6 (matches programs store dayOfWeek values)
 function dayOfWeek() {
-  // 0=Sun in JS, convert to Mon=0
   return (new Date().getDay() + 6) % 7
 }
 
 export default function LogWorkout({ onDone }) {
+  const { unit } = useSettings()
   const [exercises, setExercises] = useState([])
   const [programDay, setProgramDay] = useState(null)
-  const [logs, setLogs] = useState({}) // exerciseId → [{ weight, reps }]
+  const [logs, setLogs] = useState({})
   const [done, setDone] = useState(false)
 
   useEffect(() => {
-    Promise.all([getExercises(), getProgram()]).then(([exs, prog]) => {
+    Promise.all([getExercises(), getActiveProgram()]).then(([exs, prog]) => {
       setExercises(exs)
-      const day = prog.find(p => p.dayOfWeek === dayOfWeek())
+      const day = prog?.days?.find(p => p.dayOfWeek === dayOfWeek())
       setProgramDay(day || null)
       if (day) {
         const initial = {}
@@ -41,10 +43,11 @@ export default function LogWorkout({ onDone }) {
     }))
   }
 
+  // 1RM uses kg internally — convert entered weight before epley
   function getOneRepMax(exerciseId) {
     const sets = (logs[exerciseId] || []).filter(s => s.weight && s.reps)
     if (sets.length === 0) return null
-    return Math.max(...sets.map(s => epley(Number(s.weight), Number(s.reps))))
+    return Math.max(...sets.map(s => epley(toKg(Number(s.weight), unit), Number(s.reps))))
   }
 
   async function handleFinish() {
@@ -55,7 +58,11 @@ export default function LogWorkout({ onDone }) {
       return saveLog({
         date,
         exerciseId: Number(exerciseId),
-        sets: completedSets.map(s => ({ weight: Number(s.weight), reps: Number(s.reps) }))
+        // Always save in kg
+        sets: completedSets.map(s => ({
+          weight: toKg(Number(s.weight), unit),
+          reps: Number(s.reps)
+        }))
       })
     }).filter(Boolean)
     await Promise.all(promises)
@@ -64,6 +71,7 @@ export default function LogWorkout({ onDone }) {
   }
 
   const exMap = Object.fromEntries(exercises.map(e => [e.id, e]))
+  const unitLabel = unit.toUpperCase()
 
   if (!programDay) {
     return (
@@ -84,33 +92,54 @@ export default function LogWorkout({ onDone }) {
       {programDay.exercises.map(({ exerciseId, sets, reps }) => {
         const ex = exMap[exerciseId]
         const orm = getOneRepMax(exerciseId)
+        const ormDisplay = orm ? toDisplay(orm, unit) : null
         return (
           <div key={exerciseId} className="card" style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
               <h2>{ex?.name}</h2>
-              {orm && <span style={{ color: 'var(--accent)', fontSize: 13 }}>1RM est. {orm} kg</span>}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '32px 80px 80px 1fr', gap: 8, alignItems: 'center', marginBottom: 8, color: 'var(--muted)', fontSize: 12 }}>
-              <span>Set</span><span>Weight (kg)</span><span>Reps</span><span></span>
-            </div>
-            {(logs[exerciseId] || []).map((s, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '32px 80px 80px 1fr', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-                <span style={{ color: 'var(--muted)' }}>{i + 1}</span>
-                <input
-                  type="number" min="0" placeholder={`e.g. 80`}
-                  value={s.weight}
-                  onChange={e => updateSet(exerciseId, i, 'weight', e.target.value)}
-                />
-                <input
-                  type="number" min="1" placeholder={`e.g. ${reps}`}
-                  value={s.reps}
-                  onChange={e => updateSet(exerciseId, i, 'reps', e.target.value)}
-                />
-                <span style={{ color: 'var(--muted)', fontSize: 12 }}>
-                  {s.weight && s.reps ? `→ ${epley(Number(s.weight), Number(s.reps))} kg 1RM` : ''}
+              {ormDisplay && (
+                <span style={{ color: 'var(--accent)', fontSize: 13 }}>
+                  1RM est. {ormDisplay} {unitLabel}
                 </span>
-              </div>
-            ))}
+              )}
+            </div>
+            <div style={{
+              display: 'grid', gridTemplateColumns: '32px 100px 80px 1fr',
+              gap: 8, alignItems: 'center', marginBottom: 8, color: 'var(--muted)', fontSize: 12
+            }}>
+              <span>Set</span>
+              <span>Weight ({unitLabel})</span>
+              <span>Reps</span>
+              <span></span>
+            </div>
+            {(logs[exerciseId] || []).map((s, i) => {
+              const setOrm = s.weight && s.reps
+                ? toDisplay(epley(toKg(Number(s.weight), unit), Number(s.reps)), unit)
+                : null
+              return (
+                <div key={i} style={{
+                  display: 'grid', gridTemplateColumns: '32px 100px 80px 1fr',
+                  gap: 8, alignItems: 'center', marginBottom: 6
+                }}>
+                  <span style={{ color: 'var(--muted)' }}>{i + 1}</span>
+                  <input
+                    type="number" min="0"
+                    placeholder={unit === 'lb' ? 'e.g. 176' : 'e.g. 80'}
+                    value={s.weight}
+                    onChange={e => updateSet(exerciseId, i, 'weight', e.target.value)}
+                  />
+                  <input
+                    type="number" min="1"
+                    placeholder={`e.g. ${reps}`}
+                    value={s.reps}
+                    onChange={e => updateSet(exerciseId, i, 'reps', e.target.value)}
+                  />
+                  <span style={{ color: 'var(--muted)', fontSize: 12 }}>
+                    {setOrm ? `→ ${setOrm} ${unitLabel} 1RM` : ''}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         )
       })}
