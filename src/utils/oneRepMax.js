@@ -4,5 +4,6 @@ export function epley(weight, reps) {
 }
 
 export function bestOneRepMax(sets) {
+  if (sets.length === 0) return 0
   return Math.max(...sets.map(s => epley(s.weight, s.reps)))
 }

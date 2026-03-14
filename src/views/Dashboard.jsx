@@ -25,7 +25,7 @@ function nextHitDay(muscle, program, exercises) {
   return null
 }
 
-export default function Dashboard() {
+export default function Dashboard({ onStartLog }) {
   const [exercises, setExercises] = useState([])
   const [program, setProgram] = useState([])
   const [logs, setLogs] = useState([])
@@ -87,6 +87,9 @@ export default function Dashboard() {
               {exMap[exerciseId]?.name} — {sets}×{reps}
             </div>
           ))}
+          <button className="primary" style={{ marginTop: 16 }} onClick={onStartLog}>
+            Start Logging
+          </button>
         </div>
       ) : (
         <div className="card">

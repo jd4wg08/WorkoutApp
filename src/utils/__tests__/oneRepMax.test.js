@@ -21,3 +21,7 @@ test('bestOneRepMax returns highest 1RM across sets', () => {
 test('bestOneRepMax handles single set', () => {
   expect(bestOneRepMax([{ weight: 100, reps: 5 }])).toBe(117)
 })
+
+test('bestOneRepMax returns 0 for empty sets', () => {
+  expect(bestOneRepMax([])).toBe(0)
+})

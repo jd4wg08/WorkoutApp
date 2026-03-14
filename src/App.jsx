@@ -28,7 +28,7 @@ export default function App() {
         ))}
       </nav>
       <main>
-        {view === 'Dashboard'    && <Dashboard />}
+        {view === 'Dashboard'    && <Dashboard onStartLog={() => setView('Log Workout')} />}
         {view === 'Program'      && <ProgramBuilder />}
         {view === 'Log Workout'  && <LogWorkout onDone={() => setView('Dashboard')} />}
         {view === 'Progress'     && <Progress />}
