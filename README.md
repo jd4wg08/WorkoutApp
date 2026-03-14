@@ -1,16 +1,63 @@
-# React + Vite
+# Workout Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A local-first, single-page workout tracking application built with React. Log sessions, track strength progression, and visualize trends — all stored privately in your browser with no backend or account required.
 
-Currently, two official plugins are available:
+## Overview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Workout Tracker helps you plan and monitor resistance training. Build custom weekly programs, log exercises with live one-rep max (1RM) feedback, and watch your strength trend over time via projected charts.
 
-## React Compiler
+## Key Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Dashboard
+- Visual grid of 8 muscle groups with color-coded recency status
+  - Green: trained within 4 days
+  - Yellow: 5–7 days since last session
+  - Red: 8+ days (overdue)
+- Today's scheduled workout summary at a glance
 
-## Expanding the ESLint configuration
+### Program Builder
+- Create and manage multiple workout programs
+- 7-day weekly schedule grid — assign exercises to any day
+- Configure target sets × reps per exercise
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Workout Logger
+- Log sets in real-time during a session
+- Live 1RM estimation as you input weight and reps (Epley formula)
+- Body diagram highlighting muscles trained in the current session
+
+### Progress Tracking
+- Line chart of historical 1RM per exercise
+- 8-week linear regression projection overlay
+- Per-exercise history filterable by date range
+
+### Settings
+- Toggle between kg and lb
+- Create custom exercises with muscle group mapping
+- Deletion protection — prevents removing exercises used in active programs
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | React 19 + Vite |
+| Storage | IndexedDB (`idb`) |
+| Charts | Recharts |
+| Styling | Plain CSS (dark theme) |
+| Testing | Vitest + jsdom |
+
+## Getting Started
+
+```bash
+npm install
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+## Running Tests
+
+```bash
+npm test
+```
+
+Unit tests cover core utilities: 1RM calculation, muscle status logic, and linear regression projection.
